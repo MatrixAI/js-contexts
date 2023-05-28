@@ -1,6 +1,6 @@
 {
-  "name": "@matrixai/js-contexts",
-  "version": "2.1.1",
+  "name": "@matrixai/contexts",
+  "version": "1.0.0",
   "author": "Roger Qiu",
   "description": "Asynchronous contexts",
   "license": "Apache-2.0",
