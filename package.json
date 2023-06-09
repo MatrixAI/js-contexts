@@ -22,7 +22,7 @@
     "docs": "shx rm -rf ./docs && typedoc --gitRevision master --tsconfig ./tsconfig.build.json --out ./docs src"
   },
   "dependencies": {
-    "@matrixai/async-cancellable": "^1.0.6",
+    "@matrixai/async-cancellable": "^1.1.1",
     "@matrixai/errors": "^1.1.7",
     "@matrixai/timer": "^1.1.0"
   },
