@@ -25,7 +25,7 @@ describe('functions/timed', () => {
       expect(fTimed(undefined)).toBe('hello world');
       expect(fTimed({})).toBe('hello world');
       expect(
-        fTimed({ timer: new Timer({ delay: 50 }) }, (t) => {
+        fTimed({ timer: 50 }, (t) => {
           expect(t.delay).toBe(50);
         }),
       ).toBe('hello world');

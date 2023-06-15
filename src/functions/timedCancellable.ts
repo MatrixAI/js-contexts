@@ -1,23 +1,23 @@
-import type { ContextTimed } from '../types';
+import type { ContextTimed, ContextTimedInput } from '../types';
 import { PromiseCancellable } from '@matrixai/async-cancellable';
 import { Timer } from '@matrixai/timer';
 import * as errors from '../errors';
 
-type ContextRemaining<C> = Omit<C, keyof ContextTimed>;
+type ContextRemaining<C> = Omit<C, keyof ContextTimedInput>;
 
 type ContextAndParameters<
   C,
   P extends Array<any>,
 > = keyof ContextRemaining<C> extends never
-  ? [Partial<ContextTimed>?, ...P]
-  : [Partial<ContextTimed> & ContextRemaining<C>, ...P];
+  ? [Partial<ContextTimedInput>?, ...P]
+  : [Partial<ContextTimedInput> & ContextRemaining<C>, ...P];
 
 function setupTimedCancellable<C extends ContextTimed, P extends Array<any>, R>(
   f: (ctx: C, ...params: P) => PromiseLike<R>,
   lazy: boolean,
   delay: number,
-  errorTimeoutConstructor: new () => Error = errors.ErrorContextsTimedTimeOut,
-  ctx: Partial<ContextTimed>,
+  errorTimeoutConstructor: new () => Error,
+  ctx: Partial<ContextTimedInput>,
   args: P,
 ): PromiseCancellable<R> {
   // There are 3 properties of timer and signal:
@@ -41,11 +41,17 @@ function setupTimedCancellable<C extends ContextTimed, P extends Array<any>, R>(
   // wrapper will not re-setup this property A relationship.
   let abortController: AbortController;
   let teardownContext: () => void;
-  if (ctx.timer === undefined && ctx.signal === undefined) {
+  if (
+    (ctx.timer === undefined || typeof ctx.timer === 'number') &&
+    ctx.signal === undefined
+  ) {
     abortController = new AbortController();
     const e = new errorTimeoutConstructor();
     // Property A
-    const timer = new Timer(() => void abortController.abort(e), delay);
+    const timer = new Timer(
+      () => void abortController.abort(e),
+      ctx.timer ?? delay,
+    );
     abortController.signal.addEventListener('abort', () => {
       // Property B
       timer.cancel();
@@ -56,11 +62,17 @@ function setupTimedCancellable<C extends ContextTimed, P extends Array<any>, R>(
       // Property C
       timer.cancel();
     };
-  } else if (ctx.timer === undefined && ctx.signal instanceof AbortSignal) {
+  } else if (
+    (ctx.timer === undefined || typeof ctx.timer === 'number') &&
+    ctx.signal instanceof AbortSignal
+  ) {
     abortController = new AbortController();
     const e = new errorTimeoutConstructor();
     // Property A
-    const timer = new Timer(() => void abortController.abort(e), delay);
+    const timer = new Timer(
+      () => void abortController.abort(e),
+      ctx.timer ?? delay,
+    );
     const signalUpstream = ctx.signal;
     const signalHandler = () => {
       // Property B
@@ -137,9 +149,13 @@ function setupTimedCancellable<C extends ContextTimed, P extends Array<any>, R>(
       if (signal.aborted) {
         reject(signal.reason);
       } else {
-        signal.addEventListener('abort', () => {
-          reject(signal.reason);
-        });
+        signal.addEventListener(
+          'abort',
+          () => {
+            reject(signal.reason);
+          },
+          { once: true },
+        );
       }
     }
     void result.then(resolve, reject);
@@ -148,8 +164,13 @@ function setupTimedCancellable<C extends ContextTimed, P extends Array<any>, R>(
   }, abortController);
 }
 
-function timedCancellable<C extends ContextTimed, P extends Array<any>, R>(
-  f: (ctx: C, ...params: P) => PromiseLike<R>,
+function timedCancellable<
+  C extends ContextTimedInput,
+  C_ extends ContextTimed,
+  P extends Array<any>,
+  R,
+>(
+  f: (ctx: C_, ...params: P) => PromiseLike<R>,
   lazy: boolean = false,
   delay: number = Infinity,
   errorTimeoutConstructor: new () => Error = errors.ErrorContextsTimedTimeOut,

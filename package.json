@@ -23,8 +23,10 @@
   },
   "dependencies": {
     "@matrixai/async-cancellable": "^1.1.1",
+    "@matrixai/async-locks": "^4.0.0",
     "@matrixai/errors": "^1.1.7",
-    "@matrixai/timer": "^1.1.0"
+    "@matrixai/resources": "^1.1.5",
+    "@matrixai/timer": "^1.1.1"
   },
   "devDependencies": {
     "@swc/core": "^1.2.215",

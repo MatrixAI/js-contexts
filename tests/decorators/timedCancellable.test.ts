@@ -1,4 +1,4 @@
-import type { ContextTimed } from '@/types';
+import type { ContextTimed, ContextTimedInput } from '@/types';
 import { Timer } from '@matrixai/timer';
 import { PromiseCancellable } from '@matrixai/async-cancellable';
 import context from '@/decorators/context';
@@ -40,7 +40,7 @@ describe('decorators/timedCancellable', () => {
     const symbolFunction = Symbol('sym');
     class X {
       functionPromise(
-        ctx?: Partial<ContextTimed>,
+        ctx?: Partial<ContextTimedInput>,
         check?: (t: Timer) => any,
       ): PromiseCancellable<void>;
       @timedCancellable(false, 1000)
@@ -55,7 +55,7 @@ describe('decorators/timedCancellable', () => {
       }
 
       asyncFunction(
-        ctx?: Partial<ContextTimed>,
+        ctx?: Partial<ContextTimedInput>,
         check?: (t: Timer) => any,
       ): PromiseCancellable<void>;
       @timedCancellable(true, Infinity)
@@ -69,7 +69,7 @@ describe('decorators/timedCancellable', () => {
       }
 
       [symbolFunction](
-        ctx?: Partial<ContextTimed>,
+        ctx?: Partial<ContextTimedInput>,
         check?: (t: Timer) => any,
       ): PromiseCancellable<void>;
       @timedCancellable()
@@ -89,7 +89,7 @@ describe('decorators/timedCancellable', () => {
       expect(pC).toBeInstanceOf(PromiseCancellable);
       await pC;
       await x.functionPromise({});
-      await x.functionPromise({ timer: new Timer({ delay: 100 }) }, (t) => {
+      await x.functionPromise({ timer: 100 }, (t) => {
         expect(t.delay).toBe(100);
       });
       expect(x.functionPromise).toBeInstanceOf(Function);
@@ -127,7 +127,7 @@ describe('decorators/timedCancellable', () => {
         /**
          * Async function
          */
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(false, 50)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.signal.aborted).toBe(false);
@@ -152,7 +152,7 @@ describe('decorators/timedCancellable', () => {
         /**
          * Async function
          */
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true, 50)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.signal.aborted).toBe(false);
@@ -175,7 +175,7 @@ describe('decorators/timedCancellable', () => {
         /**
          * Async function
          */
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(false, 50, ErrorCustom)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.signal.aborted).toBe(false);
@@ -196,7 +196,7 @@ describe('decorators/timedCancellable', () => {
         /**
          * Async function
          */
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true, 50, ErrorCustom)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.signal.aborted).toBe(false);
@@ -216,7 +216,7 @@ describe('decorators/timedCancellable', () => {
         /**
          * Regular function returning promise
          */
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true, 50)
         f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.signal.aborted).toBe(false);
@@ -247,7 +247,7 @@ describe('decorators/timedCancellable', () => {
          * Regular function that actually rejects
          * when the signal is aborted
          */
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timedCancellable(true, 50)
         f(@context ctx: ContextTimed): Promise<string> {
           return new Promise((resolve, reject) => {
@@ -277,7 +277,7 @@ describe('decorators/timedCancellable', () => {
         /**
          * Regular function that actually rejects immediately
          */
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timedCancellable(true, 0)
         f(@context ctx: ContextTimed): Promise<string> {
           return new Promise((resolve, reject) => {
@@ -305,7 +305,7 @@ describe('decorators/timedCancellable', () => {
   describe('timedCancellable decorator cancellation', () => {
     test('async function cancel - eager', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable()
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.signal.aborted).toBe(false);
@@ -324,7 +324,7 @@ describe('decorators/timedCancellable', () => {
     });
     test('async function cancel - lazy', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.signal.aborted).toBe(false);
@@ -343,7 +343,7 @@ describe('decorators/timedCancellable', () => {
     });
     test('async function cancel with custom error and eager rejection', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable()
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.signal.aborted).toBe(false);
@@ -362,7 +362,7 @@ describe('decorators/timedCancellable', () => {
     });
     test('async function cancel with custom error and lazy rejection', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.signal.aborted).toBe(false);
@@ -382,7 +382,7 @@ describe('decorators/timedCancellable', () => {
     });
     test('promise timedCancellable function - eager rejection', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable()
         f(@context ctx: ContextTimed): PromiseCancellable<string> {
           const pC = new PromiseCancellable<string>(
@@ -422,7 +422,7 @@ describe('decorators/timedCancellable', () => {
     });
     test('promise timedCancellable function - lazy rejection', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true)
         f(@context ctx: ContextTimed): PromiseCancellable<string> {
           const pC = new PromiseCancellable<string>(
@@ -466,7 +466,7 @@ describe('decorators/timedCancellable', () => {
       let timer: Timer;
       let signal: AbortSignal;
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true, 50)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -478,7 +478,7 @@ describe('decorators/timedCancellable', () => {
           return await this.g(ctx);
         }
 
-        g(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        g(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true, 25)
         async g(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -500,7 +500,7 @@ describe('decorators/timedCancellable', () => {
       let timer: Timer;
       let signal: AbortSignal;
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true, 50)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -512,7 +512,7 @@ describe('decorators/timedCancellable', () => {
           return await this.g({ timer: ctx.timer });
         }
 
-        g(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        g(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true, 25)
         async g(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -532,7 +532,7 @@ describe('decorators/timedCancellable', () => {
       let timer: Timer;
       let signal: AbortSignal;
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true, 50)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -547,7 +547,7 @@ describe('decorators/timedCancellable', () => {
           return await this.g({ signal: ctx.signal });
         }
 
-        g(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        g(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true, 25)
         g(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -595,7 +595,7 @@ describe('decorators/timedCancellable', () => {
       let timer: Timer;
       let signal: AbortSignal;
       class C {
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timedCancellable(true, 50)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -607,7 +607,7 @@ describe('decorators/timedCancellable', () => {
           return await this.g();
         }
 
-        g(ctx?: Partial<ContextTimed>): Promise<string>;
+        g(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timedCancellable(true, 25)
         async g(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -625,7 +625,7 @@ describe('decorators/timedCancellable', () => {
     });
     test('propagated expiry', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true, 25)
         async f(@context ctx: ContextTimed): Promise<string> {
           // The `g` will use up all the remaining time
@@ -651,7 +651,7 @@ describe('decorators/timedCancellable', () => {
           return counter;
         }
 
-        h(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        h(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true, 25)
         async h(@context ctx: ContextTimed): Promise<string> {
           return new Promise((resolve, reject) => {
@@ -674,7 +674,7 @@ describe('decorators/timedCancellable', () => {
     });
     test('nested cancellable - lazy then lazy', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true)
         @timedCancellable(true)
         async f(@context ctx: ContextTimed): Promise<string> {
@@ -695,7 +695,7 @@ describe('decorators/timedCancellable', () => {
     });
     test('nested cancellable - lazy then eager', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(true)
         @timedCancellable(false)
         async f(@context ctx: ContextTimed): Promise<string> {
@@ -716,7 +716,7 @@ describe('decorators/timedCancellable', () => {
     });
     test('nested cancellable - eager then lazy', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(false)
         @timedCancellable(true)
         async f(@context ctx: ContextTimed): Promise<string> {
@@ -737,7 +737,7 @@ describe('decorators/timedCancellable', () => {
     });
     test('signal event listeners are removed', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable()
         async f(@context _ctx: ContextTimed): Promise<string> {
           return 'hello world';
@@ -776,7 +776,7 @@ describe('decorators/timedCancellable', () => {
     // there will be no timeout error
     let ctx_: ContextTimed | undefined;
     class C {
-      f(ctx?: Partial<ContextTimed>): Promise<string>;
+      f(ctx?: Partial<ContextTimedInput>): Promise<string>;
       @timedCancellable(true, 50)
       f(@context ctx: ContextTimed): Promise<string> {
         ctx_ = ctx;
@@ -878,7 +878,7 @@ describe('decorators/timedCancellable', () => {
         /**
          * Async function
          */
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<string>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<string>;
         @timedCancellable(() => lazy, 10000)
         async f(@context _ctx: ContextTimed): Promise<string> {
           await waitPromise.p;
@@ -925,7 +925,7 @@ describe('decorators/timedCancellable', () => {
         /**
          * Async function
          */
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<void>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<void>;
         @timedCancellable(true, () => delay)
         async f(@context ctx: ContextTimed): Promise<void> {
           signal = ctx.signal;
@@ -962,7 +962,7 @@ describe('decorators/timedCancellable', () => {
         /**
          * Async function
          */
-        f(ctx?: Partial<ContextTimed>): PromiseCancellable<void>;
+        f(ctx?: Partial<ContextTimedInput>): PromiseCancellable<void>;
         @timedCancellable(true, (object) => {
           kidnappedObject = object;
           return object.value;

@@ -1,4 +1,4 @@
-import type { ContextTimed } from '../types';
+import type { ContextTimedInput } from '../types';
 import { setupTimedCancellable } from '../functions/timedCancellable';
 import * as utils from '../utils';
 import * as errors from '../errors';
@@ -28,7 +28,7 @@ function timedCancellable(
     }
     const contextIndex = utils.getContextIndex(target, key, targetName);
     descriptor['value'] = function (...args) {
-      let ctx: Partial<ContextTimed> = args[contextIndex];
+      let ctx: Partial<ContextTimedInput> = args[contextIndex];
       if (ctx === undefined) {
         ctx = {};
       } else {

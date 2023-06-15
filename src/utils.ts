@@ -1,3 +1,5 @@
+import type { ResourceAcquire } from '@matrixai/resources';
+import type { PromiseCancellableController } from '@matrixai/async-cancellable';
 import { Timer } from '@matrixai/timer';
 
 const AsyncFunction = (async () => {}).constructor;
@@ -52,11 +54,47 @@ function checkContextTimed(
       `\`${targetName}.${key.toString()}\` decorated \`@context\` parameter's \`signal\` property is not an instance of \`AbortSignal\``,
     );
   }
-  if (ctx.timer !== undefined && !(ctx.timer instanceof Timer)) {
+  if (
+    ctx.timer !== undefined &&
+    !(typeof ctx.timer === 'number' || ctx.timer instanceof Timer)
+  ) {
     throw new TypeError(
-      `\`${targetName}.${key.toString()}\` decorated \`@context\` parameter's \`timer\` property is not an instance of \`Timer\``,
+      `\`${targetName}.${key.toString()}\` decorated \`@context\` parameter's \`timer\` property is not a number nor an instance of \`Timer\``,
     );
   }
+}
+
+/**
+ * Timer resource
+ * Use it with `withF` or `withG`.
+ */
+function timer<T = void>(
+  handlerOrOpts?:
+    | ((signal: AbortSignal) => T | PromiseLike<T>)
+    | {
+        handler?: (signal: AbortSignal) => T | PromiseLike<T>;
+        delay?: number;
+        lazy?: boolean;
+        controller?: PromiseCancellableController;
+      },
+  delay: number = 0,
+  lazy: boolean = false,
+  controller?: PromiseCancellableController,
+): ResourceAcquire<Timer<T>> {
+  return async () => {
+    let timer: Timer<T>;
+    if (typeof handlerOrOpts === 'function') {
+      timer = new Timer(handlerOrOpts, delay, lazy, controller);
+    } else {
+      timer = new Timer(handlerOrOpts);
+    }
+    return [
+      async () => {
+        timer.cancel();
+      },
+      timer,
+    ];
+  };
 }
 
 function isPromiseLike(v: any): v is PromiseLike<unknown> {
@@ -100,6 +138,7 @@ export {
   getContextIndex,
   checkContextCancellable,
   checkContextTimed,
+  timer,
   isPromiseLike,
   isGenerator,
   isAsyncGenerator,

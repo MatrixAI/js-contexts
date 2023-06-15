@@ -1,4 +1,4 @@
-import type { ContextTimed } from '../types';
+import type { ContextTimedInput } from '../types';
 import { setupTimedContext } from '../functions/timed';
 import * as utils from '../utils';
 import * as errors from '../errors';
@@ -27,7 +27,7 @@ function timed(
     const contextIndex = utils.getContextIndex(target, key, targetName);
     if (f instanceof utils.AsyncFunction) {
       descriptor['value'] = async function (...args) {
-        let ctx: Partial<ContextTimed> = args[contextIndex];
+        let ctx: Partial<ContextTimedInput> = args[contextIndex];
         if (ctx === undefined) {
           ctx = {};
         } else {
@@ -51,7 +51,7 @@ function timed(
       };
     } else if (f instanceof utils.GeneratorFunction) {
       descriptor['value'] = function* (...args) {
-        let ctx: Partial<ContextTimed> = args[contextIndex];
+        let ctx: Partial<ContextTimedInput> = args[contextIndex];
         if (ctx === undefined) {
           ctx = {};
         } else {
@@ -75,7 +75,7 @@ function timed(
       };
     } else if (f instanceof utils.AsyncGeneratorFunction) {
       descriptor['value'] = async function* (...args) {
-        let ctx: Partial<ContextTimed> = args[contextIndex];
+        let ctx: Partial<ContextTimedInput> = args[contextIndex];
         if (ctx === undefined) {
           ctx = {};
         } else {
@@ -99,7 +99,7 @@ function timed(
       };
     } else {
       descriptor['value'] = function (...args) {
-        let ctx: Partial<ContextTimed> = args[contextIndex];
+        let ctx: Partial<ContextTimedInput> = args[contextIndex];
         if (ctx === undefined) {
           ctx = {};
         } else {

@@ -1,4 +1,4 @@
-import type { ContextTimed } from '@/types';
+import type { ContextTimed, ContextTimedInput } from '@/types';
 import { Timer } from '@matrixai/timer';
 import context from '@/decorators/context';
 import timed from '@/decorators/timed';
@@ -33,7 +33,7 @@ describe('decorators/timed', () => {
         }
         const c = new C();
         // @ts-ignore invalid context timer
-        await c.f({ timer: 1 });
+        await c.f({ timer: new Error() });
       }).rejects.toThrow(TypeError);
       await expect(async () => {
         class C {
@@ -54,7 +54,7 @@ describe('decorators/timed', () => {
     const symbolFunction = Symbol('sym');
     class X {
       functionValue(
-        ctx?: Partial<ContextTimed>,
+        ctx?: Partial<ContextTimedInput>,
         check?: (t: Timer) => any,
       ): string;
       @timed(1000)
@@ -69,7 +69,7 @@ describe('decorators/timed', () => {
       }
 
       functionValueArray(
-        ctx?: Partial<ContextTimed>,
+        ctx?: Partial<ContextTimedInput>,
         check?: (t: Timer) => any,
       ): Array<number>;
       @timed(1000)
@@ -84,7 +84,7 @@ describe('decorators/timed', () => {
       }
 
       functionPromise(
-        ctx?: Partial<ContextTimed>,
+        ctx?: Partial<ContextTimedInput>,
         check?: (t: Timer) => any,
       ): Promise<void>;
       @timed(1000)
@@ -99,7 +99,7 @@ describe('decorators/timed', () => {
       }
 
       asyncFunction(
-        ctx?: Partial<ContextTimed>,
+        ctx?: Partial<ContextTimedInput>,
         check?: (t: Timer) => any,
       ): Promise<void>;
       @timed(Infinity)
@@ -113,7 +113,7 @@ describe('decorators/timed', () => {
       }
 
       generator(
-        ctx?: Partial<ContextTimed>,
+        ctx?: Partial<ContextTimedInput>,
         check?: (t: Timer) => any,
       ): Generator<void>;
       @timed(0)
@@ -127,7 +127,7 @@ describe('decorators/timed', () => {
       }
 
       functionGenerator(
-        ctx?: Partial<ContextTimed>,
+        ctx?: Partial<ContextTimedInput>,
         check?: (t: Timer) => any,
       ): Generator<void>;
       @timed(0)
@@ -139,7 +139,7 @@ describe('decorators/timed', () => {
       }
 
       asyncGenerator(
-        ctx?: Partial<ContextTimed>,
+        ctx?: Partial<ContextTimedInput>,
         check?: (t: Timer) => any,
       ): AsyncGenerator<void>;
       @timed(NaN)
@@ -153,7 +153,7 @@ describe('decorators/timed', () => {
       }
 
       functionAsyncGenerator(
-        ctx?: Partial<ContextTimed>,
+        ctx?: Partial<ContextTimedInput>,
         check?: (t: Timer) => any,
       ): AsyncGenerator<void>;
       @timed(NaN)
@@ -165,7 +165,7 @@ describe('decorators/timed', () => {
       }
 
       [symbolFunction](
-        ctx?: Partial<ContextTimed>,
+        ctx?: Partial<ContextTimedInput>,
         check?: (t: Timer) => any,
       ): Promise<void>;
       @timed()
@@ -184,7 +184,7 @@ describe('decorators/timed', () => {
       expect(x.functionValue()).toBe('hello world');
       expect(x.functionValue({})).toBe('hello world');
       expect(
-        x.functionValue({ timer: new Timer({ delay: 100 }) }, (t) => {
+        x.functionValue({ timer: 100 }, (t) => {
           expect(t.delay).toBe(100);
         }),
       ).toBe('hello world');
@@ -308,7 +308,7 @@ describe('decorators/timed', () => {
         /**
          * Async function
          */
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(50)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.signal.aborted).toBe(false);
@@ -331,7 +331,7 @@ describe('decorators/timed', () => {
         /**
          * Async function
          */
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(50, ErrorCustom)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.signal.aborted).toBe(false);
@@ -351,7 +351,7 @@ describe('decorators/timed', () => {
         /**
          * Regular function returning promise
          */
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(50)
         f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.signal.aborted).toBe(false);
@@ -382,7 +382,7 @@ describe('decorators/timed', () => {
          * Regular function that actually rejects
          * when the signal is aborted
          */
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(50)
         f(@context ctx: ContextTimed): Promise<string> {
           return new Promise((resolve, reject) => {
@@ -412,7 +412,7 @@ describe('decorators/timed', () => {
         /**
          * Regular function that actually rejects immediately
          */
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(0)
         f(@context ctx: ContextTimed): Promise<string> {
           return new Promise((resolve, reject) => {
@@ -438,7 +438,7 @@ describe('decorators/timed', () => {
     });
     test('async generator expiry', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): AsyncGenerator<string>;
+        f(ctx?: Partial<ContextTimedInput>): AsyncGenerator<string>;
         @timed(50)
         async *f(@context ctx: ContextTimed): AsyncGenerator<string> {
           while (true) {
@@ -464,7 +464,7 @@ describe('decorators/timed', () => {
     });
     test('generator expiry', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): Generator<string>;
+        f(ctx?: Partial<ContextTimedInput>): Generator<string>;
         @timed(50)
         *f(@context ctx: ContextTimed): Generator<string> {
           while (true) {
@@ -488,7 +488,7 @@ describe('decorators/timed', () => {
       let timer: Timer;
       let signal: AbortSignal;
       class C {
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(50)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -500,7 +500,7 @@ describe('decorators/timed', () => {
           return await this.g(ctx);
         }
 
-        g(ctx?: Partial<ContextTimed>): Promise<string>;
+        g(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(25)
         async g(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -521,7 +521,7 @@ describe('decorators/timed', () => {
       let timer: Timer;
       let signal: AbortSignal;
       class C {
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(50)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -533,7 +533,7 @@ describe('decorators/timed', () => {
           return await this.g({ timer: ctx.timer });
         }
 
-        g(ctx?: Partial<ContextTimed>): Promise<string>;
+        g(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(25)
         async g(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -553,7 +553,7 @@ describe('decorators/timed', () => {
       let timer: Timer;
       let signal: AbortSignal;
       class C {
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(50)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -565,7 +565,7 @@ describe('decorators/timed', () => {
           return await this.g({ signal: ctx.signal });
         }
 
-        g(ctx?: Partial<ContextTimed>): Promise<string>;
+        g(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(25)
         async g(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -587,7 +587,7 @@ describe('decorators/timed', () => {
       let timer: Timer;
       let signal: AbortSignal;
       class C {
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(50)
         async f(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -599,7 +599,7 @@ describe('decorators/timed', () => {
           return await this.g();
         }
 
-        g(ctx?: Partial<ContextTimed>): Promise<string>;
+        g(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(25)
         async g(@context ctx: ContextTimed): Promise<string> {
           expect(ctx.timer).toBeInstanceOf(Timer);
@@ -617,7 +617,7 @@ describe('decorators/timed', () => {
     });
     test('propagated expiry', async () => {
       class C {
-        f(ctx?: Partial<ContextTimed>): Promise<string>;
+        f(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(25)
         async f(@context ctx: ContextTimed): Promise<string> {
           // The `g` will use up all the remaining time
@@ -643,7 +643,7 @@ describe('decorators/timed', () => {
           return counter;
         }
 
-        h(ctx?: Partial<ContextTimed>): Promise<string>;
+        h(ctx?: Partial<ContextTimedInput>): Promise<string>;
         @timed(25)
         async h(@context ctx: ContextTimed): Promise<string> {
           return new Promise((resolve, reject) => {
@@ -670,7 +670,7 @@ describe('decorators/timed', () => {
     // there will be no timeout error
     let ctx_: ContextTimed | undefined;
     class C {
-      f(ctx?: Partial<ContextTimed>): Promise<string>;
+      f(ctx?: Partial<ContextTimedInput>): Promise<string>;
       @timed(50)
       f(@context ctx: ContextTimed): Promise<string> {
         ctx_ = ctx;

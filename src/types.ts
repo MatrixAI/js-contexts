@@ -8,4 +8,8 @@ type ContextTimed = ContextCancellable & {
   timer: Timer;
 };
 
-export type { ContextCancellable, ContextTimed };
+type ContextTimedInput = ContextCancellable & {
+  timer: Timer | number;
+};
+
+export type { ContextCancellable, ContextTimed, ContextTimedInput };

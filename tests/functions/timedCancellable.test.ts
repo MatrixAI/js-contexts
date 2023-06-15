@@ -24,7 +24,7 @@ describe('functions/timedCancellable', () => {
       await pC;
       expect(await fTimedCancellable({})).toBeUndefined();
       expect(
-        await fTimedCancellable({ timer: new Timer({ delay: 50 }) }, (t) => {
+        await fTimedCancellable({ timer: 50 }, (t) => {
           expect(t.delay).toBe(50);
         }),
       ).toBeUndefined();

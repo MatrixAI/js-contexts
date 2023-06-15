@@ -1,21 +1,21 @@
-import type { ContextTimed } from '../types';
+import type { ContextTimed, ContextTimedInput } from '../types';
 import { Timer } from '@matrixai/timer';
 import * as errors from '../errors';
 import * as utils from '../utils';
 
-type ContextRemaining<C> = Omit<C, keyof ContextTimed>;
+type ContextRemaining<C> = Omit<C, keyof ContextTimedInput>;
 
 type ContextAndParameters<
   C,
   P extends Array<any>,
 > = keyof ContextRemaining<C> extends never
-  ? [Partial<ContextTimed>?, ...P]
-  : [Partial<ContextTimed> & ContextRemaining<C>, ...P];
+  ? [Partial<ContextTimedInput>?, ...P]
+  : [Partial<ContextTimedInput> & ContextRemaining<C>, ...P];
 
 function setupTimedContext(
   delay: number,
   errorTimeoutConstructor: new () => Error,
-  ctx: Partial<ContextTimed>,
+  ctx: Partial<ContextTimedInput>,
 ): () => void {
   // There are 3 properties of timer and signal:
   //
@@ -36,11 +36,17 @@ function setupTimedContext(
   // In situation 4, there's a caveat for property A: it is assumed that the
   // caller has already setup the property A relationship, therefore this
   // wrapper will not re-setup this property A relationship.
-  if (ctx.timer === undefined && ctx.signal === undefined) {
+  if (
+    (ctx.timer === undefined || typeof ctx.timer === 'number') &&
+    ctx.signal === undefined
+  ) {
     const abortController = new AbortController();
     const e = new errorTimeoutConstructor();
     // Property A
-    const timer = new Timer(() => void abortController.abort(e), delay);
+    const timer = new Timer(
+      () => void abortController.abort(e),
+      ctx.timer ?? delay,
+    );
     abortController.signal.addEventListener('abort', () => {
       // Property B
       timer.cancel();
@@ -51,11 +57,17 @@ function setupTimedContext(
       // Property C
       timer.cancel();
     };
-  } else if (ctx.timer === undefined && ctx.signal instanceof AbortSignal) {
+  } else if (
+    (ctx.timer === undefined || typeof ctx.timer === 'number') &&
+    ctx.signal instanceof AbortSignal
+  ) {
     const abortController = new AbortController();
     const e = new errorTimeoutConstructor();
     // Property A
-    const timer = new Timer(() => void abortController.abort(e), delay);
+    const timer = new Timer(
+      () => void abortController.abort(e),
+      ctx.timer ?? delay,
+    );
     const signalUpstream = ctx.signal;
     const signalHandler = () => {
       // Property B
@@ -113,13 +125,22 @@ function setupTimedContext(
  * Timed HOF
  * This overloaded signature is external signature
  */
-function timed<C extends ContextTimed, P extends Array<any>, R>(
-  f: (ctx: C, ...params: P) => R,
+function timed<
+  C extends ContextTimedInput,
+  C_ extends ContextTimed,
+  P extends Array<any>,
+  R,
+>(
+  f: (ctx: C_, ...params: P) => R,
   delay?: number,
   errorTimeoutConstructor?: new () => Error,
 ): (...params: ContextAndParameters<C, P>) => R;
-function timed<C extends ContextTimed, P extends Array<any>>(
-  f: (ctx: C, ...params: P) => any,
+function timed<
+  C extends ContextTimedInput,
+  C_ extends ContextTimed,
+  P extends Array<any>,
+>(
+  f: (ctx: C_, ...params: P) => any,
   delay: number = Infinity,
   errorTimeoutConstructor: new () => Error = errors.ErrorContextsTimedTimeOut,
 ): (...params: ContextAndParameters<C, P>) => any {
@@ -133,7 +154,7 @@ function timed<C extends ContextTimed, P extends Array<any>>(
         ctx,
       );
       try {
-        return await f(ctx as C, ...args);
+        return await f(ctx as C_, ...args);
       } finally {
         teardownContext();
       }
@@ -148,7 +169,7 @@ function timed<C extends ContextTimed, P extends Array<any>>(
         ctx,
       );
       try {
-        return yield* f(ctx as C, ...args);
+        return yield* f(ctx as C_, ...args);
       } finally {
         teardownContext();
       }
@@ -163,7 +184,7 @@ function timed<C extends ContextTimed, P extends Array<any>>(
         ctx,
       );
       try {
-        return yield* f(ctx as C, ...args);
+        return yield* f(ctx as C_, ...args);
       } finally {
         teardownContext();
       }
@@ -177,7 +198,7 @@ function timed<C extends ContextTimed, P extends Array<any>>(
         errorTimeoutConstructor,
         ctx,
       );
-      const result = f(ctx as C, ...args);
+      const result = f(ctx as C_, ...args);
       if (utils.isPromiseLike(result)) {
         return result.then(
           (r) => {
