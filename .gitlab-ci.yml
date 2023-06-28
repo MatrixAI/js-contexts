@@ -63,38 +63,23 @@ check:lint:
     - if: $CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH != 'master' && $CI_COMMIT_TITLE !~ /^[0-9]+\.[0-9]+\.[0-9]+(?:-.*[0-9]+)?$/
       when: manual
 
-check:test-generate:
+check:test:
   stage: check
   needs: []
   script:
     - >
       nix-shell --arg ci true --run $'
-      ./scripts/check-test-generate.sh > ./tmp/check-test.yml;
+      npm test -- --ci --coverage;
       '
   artifacts:
     when: always
-    paths:
-      - ./tmp/check-test.yml
-  rules:
-    # Runs on feature commits and ignores version commits
-    - if: $CI_COMMIT_BRANCH =~ /^feature.*$/ && $CI_COMMIT_TITLE !~ /^[0-9]+\.[0-9]+\.[0-9]+(?:-.*[0-9]+)?$/
-    # Manually run on commits other than master and staging and ignore version commits
-    - if: $CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH !~ /^(?:master|staging)$/ && $CI_COMMIT_TITLE !~ /^[0-9]+\.[0-9]+\.[0-9]+(?:-.*[0-9]+)?$/
-      when: manual
-
-check:test:
-  stage: check
-  needs:
-    - check:test-generate
-  trigger:
-    include:
-      - artifact: tmp/check-test.yml
-        job: check:test-generate
-    strategy: depend
-  inherit:
-    variables: false
-  variables:
-    PARENT_PIPELINE_ID: $CI_PIPELINE_ID
+    reports:
+      junit:
+        - ./tmp/junit/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: ./tmp/coverage/cobertura-coverage.xml
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   rules:
     # Runs on feature commits and ignores version commits
     - if: $CI_COMMIT_BRANCH =~ /^feature.*$/ && $CI_COMMIT_TITLE !~ /^[0-9]+\.[0-9]+\.[0-9]+(?:-.*[0-9]+)?$/
@@ -148,37 +133,79 @@ build:dist:
     # Runs on tag pipeline where the tag is a prerelease or release version
     - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(?:-.*[0-9]+)?$/
 
-build:platforms-generate:
+build:linux:
   stage: build
   needs: []
   script:
     - >
       nix-shell --arg ci true --run $'
-      ./scripts/build-platforms-generate.sh > ./tmp/build-platforms.yml;
+      npm test -- --ci --coverage;
       '
   artifacts:
     when: always
-    paths:
-      - ./tmp/build-platforms.yml
+    reports:
+      junit:
+        - ./tmp/junit/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: ./tmp/coverage/cobertura-coverage.xml
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   rules:
     # Runs on staging commits and ignores version commits
     - if: $CI_COMMIT_BRANCH == 'staging' && $CI_COMMIT_TITLE !~ /^[0-9]+\.[0-9]+\.[0-9]+(?:-.*[0-9]+)?$/
     # Runs on tag pipeline where the tag is a prerelease or release version
     - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(?:-.*[0-9]+)?$/
 
-build:platforms:
+build:windows:
   stage: build
-  needs:
-    - build:platforms-generate
-  trigger:
-    include:
-      - artifact: tmp/build-platforms.yml
-        job: build:platforms-generate
-    strategy: depend
-  inherit:
-    variables: false
-  variables:
-    PARENT_PIPELINE_ID: $CI_PIPELINE_ID
+  needs: []
+  tags:
+    - windows
+  before_script:
+    - mkdir -Force "$CI_PROJECT_DIR/tmp"
+  script:
+    - .\scripts\choco-install.ps1
+    - refreshenv
+    - npm install --ignore-scripts
+    - $env:Path = "$(npm root)\.bin;" + $env:Path
+    - npm test -- --ci --coverage
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - ./tmp/junit/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: ./tmp/coverage/cobertura-coverage.xml
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
+  rules:
+    # Runs on staging commits and ignores version commits
+    - if: $CI_COMMIT_BRANCH == 'staging' && $CI_COMMIT_TITLE !~ /^[0-9]+\.[0-9]+\.[0-9]+(?:-.*[0-9]+)?$/
+    # Runs on tag pipeline where the tag is a prerelease or release version
+    - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(?:-.*[0-9]+)?$/
+
+build:macos:
+  stage: build
+  needs: []
+  tags:
+    - saas-macos-medium-m1
+  image: macos-12-xcode-14
+  script:
+    - eval "$(brew shellenv)"
+    - ./scripts/brew-install.sh
+    - hash -r
+    - npm install --ignore-scripts
+    - export PATH="$(npm root)/.bin:$PATH"
+    - npm test -- --ci --coverage
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - ./tmp/junit/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: ./tmp/coverage/cobertura-coverage.xml
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   rules:
     # Runs on staging commits and ignores version commits
     - if: $CI_COMMIT_BRANCH == 'staging' && $CI_COMMIT_TITLE !~ /^[0-9]+\.[0-9]+\.[0-9]+(?:-.*[0-9]+)?$/
@@ -189,7 +216,9 @@ build:prerelease:
   stage: build
   needs:
     - build:dist
-    - build:platforms
+    - build:linux
+    - build:windows
+    - build:macos
   # Don't interrupt publishing job
   interruptible: false
   script:
@@ -212,7 +241,11 @@ integration:merge:
   stage: integration
   needs:
     - build:merge
-    - job: build:platforms
+    - job: build:linux
+      optional: true
+    - job: build:windows
+      optional: true
+    - job: build:macos
       optional: true
   # Requires mutual exclusion
   resource_group: integration:merge
@@ -245,12 +278,12 @@ release:distribution:
   stage: release
   needs:
     - build:dist
-    - build:platforms
+    - build:linux
+    - build:windows
+    - build:macos
     - integration:merge
   # Don't interrupt publishing job
   interruptible: false
-  # Requires mutual exclusion
-  resource_group: release:distribution
   script:
     - echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ./.npmrc
     - echo 'Publishing library'
