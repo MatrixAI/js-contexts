@@ -1,6 +1,12 @@
 import type { ResourceAcquire } from '@matrixai/resources';
 import type { PromiseCancellableController } from '@matrixai/async-cancellable';
+import type {
+  RWLockReader,
+  RWLockWriter,
+  LockBox,
+} from '@matrixai/async-locks';
 import { Timer } from '@matrixai/timer';
+import { Monitor } from '@matrixai/async-locks';
 
 const AsyncFunction = (async () => {}).constructor;
 const GeneratorFunction = function* () {}.constructor;
@@ -97,6 +103,22 @@ function timer<T = void>(
   };
 }
 
+function monitor<RWLock extends RWLockReader | RWLockWriter>(
+  lockBox: LockBox<RWLock>,
+  lockConstructor: new () => RWLock,
+  locksPending?: Map<string, { count: number }>,
+): ResourceAcquire<Monitor<RWLock>> {
+  return async () => {
+    const monitor = new Monitor(lockBox, lockConstructor, locksPending);
+    return [
+      async () => {
+        await monitor.unlockAll();
+      },
+      monitor,
+    ];
+  };
+}
+
 function isPromiseLike(v: any): v is PromiseLike<unknown> {
   return v != null && typeof v.then === 'function';
 }
@@ -139,6 +161,7 @@ export {
   checkContextCancellable,
   checkContextTimed,
   timer,
+  monitor,
   isPromiseLike,
   isGenerator,
   isAsyncGenerator,
